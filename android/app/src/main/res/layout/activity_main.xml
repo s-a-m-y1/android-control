@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="@color/bg_light">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="controler"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:textColor="@color/ink"
+            android:layout_marginBottom="2dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="──────────────"
+            android:textColor="@color/text_secondary"
+            android:layout_marginBottom="12dp"/>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="2dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Connection" android:textStyle="bold" android:textSize="14sp"/>
+                <TextView android:id="@+id/connectionStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="○ Waiting for desktop" android:textSize="16sp" android:textStyle="bold" android:layout_marginTop="8dp"/>
+                <TextView android:id="@+id/permissionInfo" android:layout_width="match_parent" android:layout_height="wrap_content" android:textSize="11sp" android:textColor="@color/text_secondary" android:layout_marginTop="8dp"
+                    android:text="No extra permissions required. Desktop connects via ADB over USB. USB Debugging must be enabled and authorized."/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Device information" android:textStyle="bold"/>
+                <TextView android:id="@+id/deviceName" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textStyle="bold" android:textSize="16sp" android:layout_marginTop="8dp"/>
+                <TextView android:id="@+id/androidVersion" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/text_secondary" android:textSize="12sp"/>
+                <TextView android:id="@+id/resolution" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/text_secondary" android:textSize="12sp"/>
+                <TextView android:id="@+id/battery" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="@color/text_secondary" android:textSize="12sp"/>
+                <TextView android:id="@+id/serial" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textSize="10sp" android:textColor="@color/text_secondary" android:layout_marginTop="4dp"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp">
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Services" android:textStyle="bold"/>
+                <TextView android:id="@+id/serviceStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="○ Connection Service" android:layout_marginTop="8dp"/>
+                <TextView android:id="@+id/clipboardStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="✓ Clipboard"/>
+                <TextView android:id="@+id/fileStatus" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="✓ File Transfer (via ADB)"/>
+                <Button android:id="@+id/btnToggleService" android:layout_width="match_parent" android:layout_height="wrap_content" android:text="Start Service" android:layout_marginTop="12dp"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="12dp"
+            app:cardCornerRadius="12dp">
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:padding="16dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Clipboard" android:textStyle="bold"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:layout_marginTop="8dp">
+                    <Button android:id="@+id/btnCopy" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Copy"/>
+                    <Button android:id="@+id/btnPaste" android:layout_width="0dp" android:layout_weight="1" android:layout_height="wrap_content" android:text="Paste" android:layout_marginStart="8dp"/>
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="Desktop sync via scrcpy --clipboard-autosync" android:textSize="10sp" android:textColor="@color/text_secondary" android:layout_marginTop="4dp"/>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="controler • universal for any phone (minSdk 24)" android:textSize="10sp" android:textColor="@color/text_secondary" android:layout_marginTop="8dp"/>
+
+    </LinearLayout>
+</ScrollView>

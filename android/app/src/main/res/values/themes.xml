@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Controler" parent="Theme.Material3.DayNight">
+        <item name="colorPrimary">@color/teal</item>
+        <item name="colorPrimaryDark">@color/ink</item>
+        <item name="colorAccent">@color/teal</item>
+    </style>
+</resources>

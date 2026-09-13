@@ -1,0 +1,19 @@
+#!/bin/sh
+# Gradle wrapper bootstrap script (generated manually for CI-less envs)
+set -e
+GRADLE_VERSION=8.7
+APP_HOME=$(cd "$(dirname "$0")" >/dev/null && pwd -P)
+GRADLE_USER_HOME="${GRADLE_USER_HOME:-$HOME/.gradle}"
+DIST_DIR="$GRADLE_USER_HOME/wrapper/dists"
+ZIP="gradle-$GRADLE_VERSION-bin.zip"
+URL="https://services.gradle.org/distributions/$ZIP"
+TARGET="$DIST_DIR/gradle-$GRADLE_VERSION"
+
+if [ ! -d "$TARGET" ]; then
+  mkdir -p "$DIST_DIR"
+  echo "Downloading Gradle $GRADLE_VERSION..."
+  if command -v curl >/dev/null; then curl -fL "$URL" -o "$DIST_DIR/$ZIP"; else wget -q "$URL" -O "$DIST_DIR/$ZIP"; fi
+  unzip -q -o "$DIST_DIR/$ZIP" -d "$DIST_DIR"
+fi
+
+exec "$TARGET/bin/gradle" "$@"

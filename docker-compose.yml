@@ -1,0 +1,50 @@
+# Universal Android Control — Docker Compose
+# Works for ANY Android phone (minSdk 24) via USB + ADB
+# Usage:
+#   docker compose -f docker-compose.yml up -d          # backend + desktop (headless)
+#   docker compose -f docker-compose.android-control.yml up android-control-desktop --build    # just desktop
+#   ./scripts/docker-install.sh                                                                # one-liner
+#
+# For GUI on Linux host (X11 forwarding):
+#   xhost +local:docker
+#   docker compose -f docker-compose.android-control.yml run --rm --privileged -e DISPLAY=$DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix -v /dev/bus/usb:/dev/bus/usb android-control-desktop
+#
+# For APK download (universal):
+#   Open on phone: https://github.com/s-a-m-y1/android-control/releases/download/v0.1.0/app-debug.apk
+#   Or via Docker web: http://localhost:8080/app-debug.apk (when apk-server running)
+
+services:
+  android-control-desktop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: android-control:0.1.0
+    privileged: true
+    network_mode: host
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+      - ${HOME:-/root}/.config/android-control:/root/.config/android-control
+    environment:
+      - DISPLAY=${DISPLAY:-:0}
+      - QT_QPA_PLATFORM=xcb
+    stdin_open: true
+    tty: true
+
+  # Simple HTTP server to download APK for ANY phone (universal)
+  apk-server:
+    image: python:3.11-alpine
+    command: sh -c "mkdir -p /apk && cp /src/android/app/build/outputs/apk/debug/app-debug.apk /apk/ 2>/dev/null || wget -O /apk/app-debug.apk https://github.com/s-a-m-y1/android-control/releases/download/v0.1.0/app-debug.apk; cd /apk && python -m http.server 8080"
+    volumes:
+      - ./android/app/build/outputs/apk/debug:/src/android/app/build/outputs/apk/debug:ro
+    ports:
+      - "8080:8080"
+
+  # ADB bridge (headless, works for any phone)
+  adb-bridge:
+    image: instrumentisto/adb:latest
+    privileged: true
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+    network_mode: host
+    command: adb -a -P 5037 server nodaemon

@@ -1,0 +1,35 @@
+# Local
+.env
+*.log
+node_modules/
+dist/
+build/
+.gradle/
+.idea/
+*.iml
+local.properties
+coverage/
+.cxx/
+*.apk
+*.aab
+
+# Android Control
+/build/
+/desktop/build/
+*.o
+*.so
+*.a
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+cmake_install.cmake
+Makefile
+/test_results.xml
+.DS_Store
+.vscode/
+*.user
+/sysroot/
+/tmp/
+*.deb
+packaging/deb/android-control_*/
+packaging/appimage/AndroidControl.AppDir/

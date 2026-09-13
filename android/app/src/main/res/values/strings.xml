@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">controler</string>
+    <string name="control_title">controler</string>
+    <string name="control_connection">Connection</string>
+    <string name="control_connected">● Desktop connected</string>
+    <string name="control_disconnected">○ Waiting for desktop</string>
+    <string name="control_device_info">Device information</string>
+    <string name="control_services">Services</string>
+    <string name="control_start">Start Service</string>
+    <string name="control_stop">Stop Service</string>
+</resources>

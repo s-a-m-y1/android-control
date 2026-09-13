@@ -1,0 +1,30 @@
+name: Desktop Build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y cmake qt6-base-dev libspdlog-dev libfmt-dev libgtest-dev android-sdk-platform-tools scrcpy ffmpeg pkg-config build-essential
+
+      - name: Configure CMake
+        run: cmake -S desktop -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Run tests
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Verify binary
+        run: ls -lh build/android-control

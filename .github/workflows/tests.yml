@@ -1,0 +1,35 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  desktop:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install deps
+        run: |
+          sudo apt update
+          sudo apt install -y cmake qt6-base-dev libspdlog-dev libfmt-dev libgtest-dev android-sdk-platform-tools scrcpy pkg-config build-essential
+      - name: Build & Test
+        run: |
+          cmake -S desktop -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel
+          ctest --test-dir build --output-on-failure
+          ./build/tests/android_control_tests --gtest_output=xml:test.xml
+
+  android-unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+          cache: gradle
+      - run: chmod +x android/gradlew
+      - run: cd android && ./gradlew assembleDebug testDebugUnitTest

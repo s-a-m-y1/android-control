@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="teal">#4B7A73</color>
+    <color name="ink">#1C2B39</color>
+    <color name="bg_light">#F2EFE9</color>
+    <color name="text_primary">#1C2B39</color>
+    <color name="text_secondary">#6c757d</color>
+    <color name="white">#FFFFFF</color>
+</resources>
