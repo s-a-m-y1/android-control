@@ -48,8 +48,8 @@ MainWindow::MainWindow(AdbManager *adb, ScrcpyManager *scrcpy, SettingsManager *
     });
 
     m_refreshTimer = new QTimer(this);
-    connect(m_refreshTimer, &QTimer::timeout, this, &MainWindow::refreshDevices);
-    m_refreshTimer->start(2000);
+    connect(m_refreshTimer, &QTimer::timeout, this, [this](){ m_adb->listDevicesAsync(); });
+    m_refreshTimer->start(5000);
 
     // Restore selected device
     m_selectedSerial = m_settings->connection.selectedDevice;
@@ -67,11 +67,11 @@ void MainWindow::setupUi() {
 
     // Banner for ADB missing
     m_banner = new QWidget(this);
-    m_banner->setStyleSheet("background: #fff3cd; border: 1px solid #ffe69c; border-radius: 8px; padding: 8px;");
+    m_banner->setStyleSheet("background: #3a3020; border: 1px solid #7a6224; border-radius: 8px; padding: 8px;");
     auto *bannerLayout = new QVBoxLayout(m_banner);
     m_bannerLabel = new QLabel(m_banner);
     m_bannerLabel->setWordWrap(true);
-    m_bannerLabel->setStyleSheet("color: #664d03;");
+    m_bannerLabel->setStyleSheet("color: #ffd666;");
     bannerLayout->addWidget(m_bannerLabel);
     m_banner->setVisible(false);
     m_mainLayout->addWidget(m_banner);
@@ -79,10 +79,10 @@ void MainWindow::setupUi() {
     // Header: title + refresh
     auto *header = new QHBoxLayout();
     auto *title = new QLabel("Devices", this);
-    title->setStyleSheet("font-size: 18px; font-weight: 700;");
+    title->setProperty("role", "title");
     m_deviceCountLabel = new QLabel("", this);
-    m_deviceCountLabel->setStyleSheet("color: #6c757d; font-size: 12px;");
-    auto *refreshBtn = new QPushButton("Refresh", this);
+    m_deviceCountLabel->setProperty("role", "muted");
+    auto *refreshBtn = new QPushButton("⟳  Refresh", this);
     refreshBtn->setCursor(Qt::PointingHandCursor);
     connect(refreshBtn, &QPushButton::clicked, this, &MainWindow::refreshDevices);
     header->addWidget(title);
@@ -106,11 +106,10 @@ void MainWindow::setupUi() {
 
     // Preview frame (phone screen placeholder)
     m_previewFrame = new QFrame(this);
-    m_previewFrame->setFrameShape(QFrame::StyledPanel);
+    m_previewFrame->setFrameShape(QFrame::NoFrame);
+    m_previewFrame->setProperty("role", "card");
     m_previewFrame->setStyleSheet(R"(
-        QFrame { background: #0f0f0f; border-radius: 18px; border: 1px solid #2d2d2d; }
-        QLabel { color: white; }
-        QPushButton { border-radius: 8px; padding: 8px 16px; font-weight: 600; }
+        QFrame { background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #20242f, stop:1 #171a22); border-radius: 18px; border: 1px solid #2a2e3a; }
     )");
     m_previewFrame->setMinimumHeight(340);
     m_previewFrame->setMaximumWidth(480);
@@ -128,14 +127,14 @@ void MainWindow::setupUi() {
     m_previewSubtitle = new QLabel("Select a device to start mirroring", m_previewFrame);
     m_previewSubtitle->setAlignment(Qt::AlignCenter);
     m_previewSubtitle->setWordWrap(true);
-    m_previewSubtitle->setStyleSheet("color: #adb5bd; font-size: 12px;");
+    m_previewSubtitle->setProperty("role", "muted");
     m_previewHint = new QLabel("Mouse: left=touch • right=Back • middle=Home • wheel=scroll\nDrag & copy/paste via scrcpy", m_previewFrame);
     m_previewHint->setAlignment(Qt::AlignCenter);
     m_previewHint->setWordWrap(true);
-    m_previewHint->setStyleSheet("color: #6c757d; font-size: 11px;");
+    m_previewHint->setStyleSheet("color: #6d7488; font-size: 11px;");
     m_centerMirrorButton = new QPushButton("Start Mirroring", m_previewFrame);
     m_centerMirrorButton->setCursor(Qt::PointingHandCursor);
-    m_centerMirrorButton->setStyleSheet("background: #2ec27e; color: white; padding: 10px 24px; font-weight: 700; border-radius: 8px;");
+    m_centerMirrorButton->setProperty("variant", "primary");
     connect(m_centerMirrorButton, &QPushButton::clicked, this, [this](){
         if (m_selectedSerial.isEmpty()) {
             QMessageBox::information(this, "No device", "Select a device first.");
@@ -160,7 +159,6 @@ void MainWindow::setupUi() {
     m_infoGroup = new QGroupBox("Device Information", this);
     auto *infoLayout = new QVBoxLayout(m_infoGroup);
     m_infoLabel = new QLabel("Select a device", m_infoGroup);
-    m_infoLabel->setStyleSheet("color: #495057; font-size: 12px;");
     m_infoLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
     m_infoLabel->setWordWrap(true);
     infoLayout->addWidget(m_infoLabel);
@@ -170,13 +168,13 @@ void MainWindow::setupUi() {
     // Status bar
     auto *statusRow = new QHBoxLayout();
     m_statusDot = new QLabel("●", this);
-    m_statusDot->setStyleSheet("color: #e01b24; font-size: 14px;");
+    m_statusDot->setStyleSheet("color: #ff5f56; font-size: 14px;");
     m_statusLabel = new QLabel("Disconnected", this);
     m_statusLabel->setStyleSheet("font-size: 12px; font-weight: 600;");
     m_fpsLabel = new QLabel(QString::number(m_settings->display.maxFps) + " FPS", this);
-    m_fpsLabel->setStyleSheet("color: #6c757d; font-size: 11px; border: 1px solid #dee2e6; border-radius: 6px; padding: 2px 6px;");
+    m_fpsLabel->setProperty("role", "chip");
     m_usbLabel = new QLabel("USB", this);
-    m_usbLabel->setStyleSheet("color: #6c757d; font-size: 11px; border: 1px solid #dee2e6; border-radius: 6px; padding: 2px 6px; background: palette(base);");
+    m_usbLabel->setProperty("role", "chip");
     statusRow->addWidget(m_statusDot);
     statusRow->addWidget(m_statusLabel);
     statusRow->addStretch();
@@ -194,10 +192,9 @@ void MainWindow::setupUi() {
     m_btnDisconnect = new QPushButton("Disconnect", this);
     for (auto *b : {m_btnScreenshot, m_btnRecord, m_btnRotate, m_btnFullscreen, m_btnDisconnect}) {
         b->setCursor(Qt::PointingHandCursor);
-        b->setStyleSheet("QPushButton { background: palette(button); border: 1px solid palette(mid); border-radius: 8px; padding: 8px 14px; } QPushButton:hover { background: palette(midlight); }");
         actions->addWidget(b);
     }
-    m_btnDisconnect->setStyleSheet("QPushButton { background: #e01b24; color: white; border-radius: 8px; padding: 8px 14px; font-weight: 600; }");
+    m_btnDisconnect->setProperty("variant", "danger");
     connect(m_btnScreenshot, &QPushButton::clicked, this, &MainWindow::onScreenshot);
     connect(m_btnRecord, &QPushButton::clicked, this, &MainWindow::onRecord);
     connect(m_btnRotate, &QPushButton::clicked, this, &MainWindow::onRotate);
@@ -217,7 +214,6 @@ void MainWindow::setupUi() {
     auto *btnPaste = new QPushButton("Paste", this);
     for (auto *b : {m_btnBack, m_btnHome, m_btnRecent, m_btnPush, m_btnPull, btnCopy, btnPaste}) {
         b->setCursor(Qt::PointingHandCursor);
-        b->setStyleSheet("QPushButton { background: palette(base); border: 1px solid palette(mid); border-radius: 8px; padding: 6px 10px; font-size: 11px; }");
         actions2->addWidget(b);
     }
     connect(m_btnBack, &QPushButton::clicked, this, [this](){
@@ -237,7 +233,7 @@ void MainWindow::setupUi() {
 
     // Footer shortcuts hint
     auto *hint = new QLabel("Shortcuts: Ctrl+R Refresh • Ctrl+, Settings • Ctrl+S Screenshot • Ctrl+Shift+R Record • Alt+Enter Fullscreen", this);
-    hint->setStyleSheet("color: #6c757d; font-size: 10px;");
+    hint->setProperty("role", "muted");
     hint->setAlignment(Qt::AlignCenter);
     hint->setWordWrap(true);
     m_mainLayout->addWidget(hint);
@@ -293,12 +289,8 @@ void MainWindow::showAdbGuide() {
 }
 
 void MainWindow::refreshDevices() {
-    try {
-        auto devs = m_adb->listDevices(true);
-        onDevicesUpdated(devs);
-    } catch (const std::exception &e) {
-        onError(QString::fromStdString(e.what()));
-    }
+    statusBar()->showMessage("Refreshing devices...", 2000);
+    m_adb->listDevicesAsync();
 }
 
 void MainWindow::onDevicesUpdated(const std::vector<DeviceInfo> &devices) {
@@ -319,10 +311,10 @@ void MainWindow::rebuildDeviceList() {
     if (m_devices.empty()) {
         auto *empty = new QLabel("No Android device detected\n\nConnect your phone using USB\nand enable USB Debugging.", this);
         empty->setAlignment(Qt::AlignCenter);
-        empty->setStyleSheet("color: #6c757d; padding: 16px; border: 1px dashed #dee2e6; border-radius: 8px; background: palette(base);");
+        empty->setStyleSheet("color: #8b93a7; padding: 16px; border: 1px dashed #2a2e3a; border-radius: 8px;");
         m_deviceListLayout->addWidget(empty);
         auto *btn = new QPushButton("Refresh Devices", this);
-        btn->setStyleSheet("background: #2ec27e; color: white; border-radius: 8px; padding: 8px;");
+        btn->setProperty("variant", "primary");
         connect(btn, &QPushButton::clicked, this, &MainWindow::refreshDevices);
         m_deviceListLayout->addWidget(btn, 0, Qt::AlignHCenter);
         m_selectedSerial.clear();

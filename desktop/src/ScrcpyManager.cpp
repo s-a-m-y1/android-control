@@ -3,7 +3,6 @@
 #include <QDir>
 #include <QDateTime>
 #include <QProcess>
-#include <QThread>
 #include <QDebug>
 #include <QRegularExpression>
 
@@ -98,17 +97,10 @@ bool ScrcpyManager::start(const QString &serial, const QStringList &extraArgs) {
         proc->deleteLater();
         return false;
     }
-    // wait briefly to catch immediate failure
-    QThread::msleep(400);
-    if (proc->state() != QProcess::Running) {
-        m_lastError = QString::fromUtf8(proc->readAllStandardError()).trimmed();
-        if (m_lastError.isEmpty()) m_lastError = "scrcpy exited immediately";
-        emit mirroringFailed(serial, m_lastError);
-        proc->deleteLater();
-        return false;
-    }
     m_processes[serial] = proc;
     emit mirroringStarted(serial);
+    // Immediate-exit failures are caught by the finished() lambda above, which
+    // emits mirroringFailed with scrcpy's stderr — no blocking sleep needed.
     return true;
 }
 
@@ -189,8 +181,6 @@ bool ScrcpyManager::startRecording(const QString &serial, const QString &outputP
         else if (m_settings->recording.recordingQuality == "medium") extra << "--video-bit-rate" << "4000000";
     }
     if (isMirroring(serial)) stop(serial);
-    // small delay
-    QThread::msleep(200);
     bool ok = start(serial, extra);
     if (ok) {
         m_isRecording[serial] = true;
@@ -200,21 +190,24 @@ bool ScrcpyManager::startRecording(const QString &serial, const QString &outputP
 }
 
 bool ScrcpyManager::sendKeyEvent(const QString &serial, int keyCode) {
-    QProcess::execute("adb", {"-s", serial, "shell", "input", "keyevent", QString::number(keyCode)});
+    // Fire-and-forget: run on a detached process so button clicks never block the UI.
+    QProcess *p = new QProcess(this);
+    connect(p, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), p, &QProcess::deleteLater);
+    p->start("adb", {"-s", serial, "shell", "input", "keyevent", QString::number(keyCode)});
     return true;
 }
 
 bool ScrcpyManager::rotateDevice(const QString &serial) {
-    // Cycle user_rotation 0..3
-    QProcess p;
-    p.start("adb", {"-s", serial, "shell", "settings", "get", "system", "user_rotation"});
-    p.waitForFinished(3000);
-    QString cur = QString::fromUtf8(p.readAllStandardOutput()).trimmed();
-    bool ok; int curInt = cur.toInt(&ok);
-    if (!ok) curInt = 0;
-    int nxt = (curInt + 1) % 4;
-    QProcess::execute("adb", {"-s", serial, "shell", "settings", "put", "system", "accelerometer_rotation", "0"});
-    QProcess::execute("adb", {"-s", serial, "shell", "settings", "put", "system", "user_rotation", QString::number(nxt)});
+    // Runs the whole rotation cycle in one shell invocation on a detached process
+    // so the UI thread never waits on adb.
+    QString script =
+        "cur=$(settings get system user_rotation); "
+        "case $cur in 0|1|2|3) nxt=$(( (cur+1)%4 ));; *) nxt=1;; esac; "
+        "settings put system accelerometer_rotation 0; "
+        "settings put system user_rotation $nxt";
+    QProcess *p = new QProcess(this);
+    connect(p, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), p, &QProcess::deleteLater);
+    p->start("adb", {"-s", serial, "shell", script});
     return true;
 }
 

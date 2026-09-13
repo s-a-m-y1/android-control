@@ -7,6 +7,7 @@
 #include "ClipboardManager.h"
 #include "MainWindow.h"
 #include <QDebug>
+#include <QFile>
 #include <cstdio>
 
 int main(int argc, char *argv[]) {
@@ -18,6 +19,13 @@ int main(int argc, char *argv[]) {
     app.setOrganizationName("AndroidControl");
     app.setApplicationVersion("1.0.0");
     app.setDesktopFileName("com.github.androidcontrol");
+
+    // Modern dark theme
+    {
+        QFile th(":themes/dark-theme.qss");
+        if (th.open(QIODevice::ReadOnly | QIODevice::Text))
+            app.setStyleSheet(QString::fromUtf8(th.readAll()));
+    }
 
     // Optional: set OpenGL format for hardware acceleration
     QSurfaceFormat fmt;

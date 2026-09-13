@@ -61,7 +61,7 @@ if(FFMPEG_FOUND)
 endif()
 
 # Main executable
-add_executable(android-control src/main.cpp)
+add_executable(android-control src/main.cpp resources/resources.qrc)
 target_compile_definitions(android-control PRIVATE ANDROID_CONTROL_VERSION="${PROJECT_VERSION}")
 target_link_libraries(android-control PRIVATE android_control_core)
 

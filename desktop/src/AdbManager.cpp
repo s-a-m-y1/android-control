@@ -3,6 +3,7 @@
 #include <QStandardPaths>
 #include <QRegularExpression>
 #include <QDebug>
+#include <QtConcurrent/QtConcurrent>
 
 namespace AndroidControl {
 
@@ -68,12 +69,7 @@ QString AdbManager::getResolution(const QString &serial) {
     return {};
 }
 
-QString AdbManager::getRefreshRate(const QString &serial) {
-    // Not critical
-    return {};
-}
-
-std::vector<DeviceInfo> AdbManager::listDevices(bool detailed) {
+std::vector<DeviceInfo> AdbManager::queryDevices(bool detailed) {
     if (!isAdbInstalled()) {
         throw std::runtime_error("ADB is not installed");
     }
@@ -111,22 +107,60 @@ std::vector<DeviceInfo> AdbManager::listDevices(bool detailed) {
     }
 
     if (detailed) {
+        // One combined shell call instead of six getprop/dumpsys round trips per device.
         for (auto &d : devices) {
             if (d.state == DeviceState::Connected) {
-                d.model = getProp(d.serial, "ro.product.model").isEmpty() ? d.model : getProp(d.serial, "ro.product.model");
-                d.manufacturer = getProp(d.serial, "ro.product.manufacturer");
-                d.androidVersion = getProp(d.serial, "ro.build.version.release");
-                d.apiLevel = getProp(d.serial, "ro.build.version.sdk");
-                d.batteryLevel = getBattery(d.serial);
-                d.resolution = getResolution(d.serial);
+                try {
+                    QString out2 = runAdb({"-s", d.serial, "shell",
+                        "getprop ro.product.model; getprop ro.product.manufacturer; "
+                        "getprop ro.build.version.release; getprop ro.build.version.sdk; "
+                        "dumpsys battery | grep level; wm size"}, 6000);
+                    QStringList vals = out2.split('\n', Qt::SkipEmptyParts);
+                    auto take = [&](int i) { return i < vals.size() ? vals[i].trimmed() : QString(); };
+                    QString model = take(0);
+                    if (!model.isEmpty()) d.model = model;
+                    d.manufacturer = take(1);
+                    d.androidVersion = take(2);
+                    d.apiLevel = take(3);
+                    static const QRegularExpression reLevel(R"(level:\s*(\d+))");
+                    auto mL = reLevel.match(out2);
+                    if (mL.hasMatch()) d.batteryLevel = mL.captured(1).toInt();
+                    static const QRegularExpression reRes(R"((\d+x\d+))");
+                    auto mR = reRes.match(out2);
+                    if (mR.hasMatch()) d.resolution = mR.captured(1);
+                } catch (...) {}
             }
         }
     }
     return devices;
 }
 
+void AdbManager::listDevicesAsync(bool detailed) {
+    if (m_queryRunning) return; // don't pile up queries if adb is slow
+    m_queryRunning = true;
+    auto *self = this;
+    (void)QtConcurrent::run([self, detailed]() {
+        std::vector<DeviceInfo> devs;
+        QString err;
+        try {
+            devs = queryDevices(detailed);
+        } catch (const std::exception &e) {
+            err = QString::fromUtf8(e.what());
+        }
+        QMetaObject::invokeMethod(self, [self, devs, err]() {
+            self->m_queryRunning = false;
+            if (err.isEmpty()) emit self->devicesUpdated(devs);
+            else emit self->errorOccurred(err);
+        }, Qt::QueuedConnection);
+    });
+}
+
+std::vector<DeviceInfo> AdbManager::listDevices(bool detailed) {
+    return queryDevices(detailed);
+}
+
 DeviceInfo AdbManager::getDeviceInfo(const QString &serial) {
-    auto devices = listDevices(true);
+    auto devices = queryDevices(true);
     for (auto &d : devices) if (d.serial == serial) return d;
     DeviceInfo info;
     info.serial = serial;
@@ -141,19 +175,13 @@ DeviceInfo AdbManager::getDeviceInfo(const QString &serial) {
 }
 
 bool AdbManager::restartServer() {
-    try {
-        QProcess::execute("adb", {"kill-server"});
-        QProcess::execute("adb", {"start-server"});
-        qInfo() << "ADB server restarted";
-        return true;
-    } catch (...) {
-        return false;
-    }
+    QProcess::execute("adb", {"kill-server"});
+    QProcess::execute("adb", {"start-server"});
+    qInfo() << "ADB server restarted";
+    return true;
 }
 
 bool AdbManager::authorizeDevice(const QString &serial) {
-    Q_UNUSED(serial);
-    // Just trigger wait-for-device
     try {
         runAdb({"-s", serial, "wait-for-device"}, 10000);
         return true;
@@ -169,12 +197,7 @@ void AdbManager::stopAutoRefresh() {
 }
 
 void AdbManager::onAutoRefresh() {
-    try {
-        auto devs = listDevices(true);
-        emit devicesUpdated(devs);
-    } catch (const std::exception &e) {
-        emit errorOccurred(QString::fromStdString(e.what()));
-    }
+    listDevicesAsync(true);
 }
 
 } // namespace AndroidControl
