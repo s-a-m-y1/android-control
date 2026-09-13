@@ -23,7 +23,6 @@
 #include <QStatusBar>
 #include <QTimer>
 #include <QDebug>
-#include <spdlog/spdlog.h>
 
 namespace AndroidControl {
 
@@ -385,6 +384,23 @@ void MainWindow::onDeviceSelected(const QString &serial) {
     rebuildDeviceList();
     updatePreview();
     updateStatusBar();
+}
+
+void MainWindow::startMirroringFor(const QString &serial) {
+    // Delay until the first device detection pass has populated m_devices.
+    QTimer::singleShot(1500, this, [this, serial]() {
+        if (!serial.isEmpty()) {
+            onMirrorRequested(serial);
+            return;
+        }
+        for (const auto &d : m_devices) {
+            if (d.state == DeviceState::Connected) {
+                onMirrorRequested(d.serial);
+                return;
+            }
+        }
+        statusBar()->showMessage("No connected device to mirror", 5000);
+    });
 }
 
 void MainWindow::onMirrorRequested(const QString &serial) {

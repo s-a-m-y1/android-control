@@ -24,6 +24,9 @@ public:
                         QWidget *parent = nullptr);
     ~MainWindow() override = default;
 
+    // Auto-start mirroring on launch (--mirror [serial]); empty serial picks the first connected device.
+    void startMirroringFor(const QString &serial);
+
 private slots:
     void onDevicesUpdated(const std::vector<DeviceInfo> &devices);
     void onError(const QString &msg);

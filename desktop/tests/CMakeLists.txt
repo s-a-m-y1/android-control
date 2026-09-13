@@ -14,6 +14,7 @@ if(NOT GTest_FOUND)
 endif()
 
 set(TEST_SOURCES
+    main_test.cpp
     test_adb_manager.cpp
     test_device_info.cpp
     test_settings.cpp
@@ -32,22 +33,10 @@ target_link_libraries(android_control_tests PRIVATE
     android_control_core
 )
 
-if(TARGET spdlog::spdlog)
-    target_link_libraries(android_control_tests PRIVATE spdlog::spdlog)
-elseif(SPDLOG_FOUND)
-    target_include_directories(android_control_tests PRIVATE ${SPDLOG_INCLUDE_DIRS})
-    target_link_libraries(android_control_tests PRIVATE ${SPDLOG_LIBRARIES})
-else()
-    find_package(fmt QUIET)
-    if(TARGET fmt::fmt)
-        target_link_libraries(android_control_tests PRIVATE fmt::fmt)
-    endif()
-endif()
-
 if(TARGET GTest::gtest)
-    target_link_libraries(android_control_tests PRIVATE GTest::gtest GTest::gtest_main)
+    target_link_libraries(android_control_tests PRIVATE GTest::gtest Qt6::Core)
 else()
-    target_link_libraries(android_control_tests PRIVATE gtest gtest_main pthread)
+    target_link_libraries(android_control_tests PRIVATE gtest Qt6::Core pthread)
 endif()
 
 include(GoogleTest)

@@ -4,7 +4,7 @@
 #include <QFile>
 #include <QJsonDocument>
 #include <QJsonObject>
-#include <spdlog/spdlog.h>
+#include <QDebug>
 
 namespace AndroidControl {
 
@@ -46,13 +46,13 @@ void SettingsManager::load() {
         return;
     }
     if (!f.open(QIODevice::ReadOnly)) {
-        spdlog::warn("Failed to open settings file {}", m_configPath.toStdString());
+        qWarning() << "Failed to open settings file" << m_configPath;
         return;
     }
     QByteArray data = f.readAll();
     QJsonDocument doc = QJsonDocument::fromJson(data);
     if (doc.isNull() || !doc.isObject()) {
-        spdlog::warn("Invalid settings json");
+        qWarning() << "Invalid settings json";
         return;
     }
     fromJson(doc.object());
@@ -62,7 +62,7 @@ void SettingsManager::save() {
     QDir().mkpath(QFileInfo(m_configPath).absolutePath());
     QFile f(m_configPath);
     if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
-        spdlog::error("Failed to save settings to {}", m_configPath.toStdString());
+        qCritical() << "Failed to save settings to" << m_configPath;
         return;
     }
     QJsonDocument doc(toJson());

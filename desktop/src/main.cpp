@@ -6,7 +6,8 @@
 #include "FileTransferManager.h"
 #include "ClipboardManager.h"
 #include "MainWindow.h"
-#include <spdlog/spdlog.h>
+#include <QDebug>
+#include <cstdio>
 
 int main(int argc, char *argv[]) {
     // Enable high DPI scaling
@@ -26,8 +27,22 @@ int main(int argc, char *argv[]) {
     fmt.setProfile(QSurfaceFormat::CoreProfile);
     QSurfaceFormat::setDefaultFormat(fmt);
 
-    spdlog::set_level(spdlog::level::info);
-    spdlog::info("Android Control starting...");
+    qInfo() << "Android Control starting...";
+
+    // --help / --version / --mirror [serial] support
+    const QStringList cli = QCoreApplication::arguments();
+    if (cli.contains("--help") || cli.contains("-h")) {
+        printf("Android Control — mirror & control Android via USB (ADB + scrcpy)\n"
+               "Usage: android-control [options]\n"
+               "  --mirror [serial]  start mirroring on launch (default: first connected device)\n"
+               "  --version          print version\n"
+               "  --help             show this help\n");
+        return 0;
+    }
+    if (cli.contains("--version") || cli.contains("-v")) {
+        printf("Android Control %s\n", ANDROID_CONTROL_VERSION);
+        return 0;
+    }
 
     AndroidControl::SettingsManager settings;
     AndroidControl::AdbManager adb;
@@ -39,8 +54,17 @@ int main(int argc, char *argv[]) {
     AndroidControl::MainWindow w(&adb, &scrcpy, &settings, &fileMgr, &clipboard);
     w.show();
 
+    // --mirror [serial]: start mirroring immediately (serial optional = first connected device)
+    const int mirrorIdx = cli.indexOf("--mirror");
+    if (mirrorIdx >= 0) {
+        QString serial;
+        if (mirrorIdx + 1 < cli.size() && !cli.at(mirrorIdx + 1).startsWith('-'))
+            serial = cli.at(mirrorIdx + 1);
+        w.startMirroringFor(serial);
+    }
+
     int ret = app.exec();
     scrcpy.stopAll();
-    spdlog::info("Android Control exited with {}", ret);
+    qInfo() << "Android Control exited with" << ret;
     return ret;
 }

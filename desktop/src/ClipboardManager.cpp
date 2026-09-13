@@ -2,7 +2,7 @@
 #include <QGuiApplication>
 #include <QProcess>
 #include <QRegularExpression>
-#include <spdlog/spdlog.h>
+#include <QDebug>
 
 namespace AndroidControl {
 
@@ -18,7 +18,7 @@ bool ClipboardManager::copyToDevice(const QString &serial, const QString &text) 
     // scrcpy handles clipboard autosync if enabled, but we can also use: adb shell am broadcast... or cmd clipboard?
     // For Android 10+, we can try: adb shell cmd clipboard (requires root? fallback)
     // We'll try: echo text | adb shell cmd clipboard set
-    spdlog::info("Copy to device {}: {} chars", serial.toStdString(), text.size());
+    qInfo() << "Copy to device" << serial << ":" << text.size() << "chars";
     QProcess p;
     // Escape text: use printf
     // Simplest: use adb shell input? For text, use clipboard via service: adb shell service call clipboard
@@ -40,7 +40,7 @@ bool ClipboardManager::copyToDevice(const QString &serial, const QString &text) 
 }
 
 QString ClipboardManager::pasteFromDevice(const QString &serial) {
-    spdlog::info("Paste from device {}", serial.toStdString());
+    qInfo() << "Paste from device" << serial;
     // Try to get clipboard via adb
     QProcess p;
     // Try service call

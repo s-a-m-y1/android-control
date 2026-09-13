@@ -1,7 +1,7 @@
 #include "FileTransferManager.h"
 #include <QProcess>
 #include <QFileInfo>
-#include <spdlog/spdlog.h>
+#include <QDebug>
 
 namespace AndroidControl {
 
@@ -21,7 +21,7 @@ bool FileTransferManager::pushFile(const QString &serial, const QString &localPa
     }
     m_busy = true;
     m_cancelRequested = false;
-    spdlog::info("Push {} to {}:{}", localPath.toStdString(), serial.toStdString(), remotePath.toStdString());
+    qInfo() << "Push" << localPath << "to" << serial + ":" << remotePath;
 
     QProcess p;
     p.start("adb", {"-s", serial, "push", localPath, remotePath});
@@ -47,7 +47,7 @@ bool FileTransferManager::pullFile(const QString &serial, const QString &remoteP
         return false;
     }
     m_busy = true;
-    spdlog::info("Pull {}:{} to {}", serial.toStdString(), remotePath.toStdString(), localPath.toStdString());
+    qInfo() << "Pull" << serial + ":" << remotePath << "to" << localPath;
     QProcess p;
     p.start("adb", {"-s", serial, "pull", remotePath, localPath});
     if (!p.waitForFinished(120000)) {

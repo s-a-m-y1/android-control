@@ -12,15 +12,7 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Widgets Gui Network)
 
-# Optional deps
-find_package(spdlog QUIET)
-if(NOT spdlog_FOUND)
-    message(STATUS "spdlog not found via find_package, trying pkg-config / fallback")
-    find_package(PkgConfig QUIET)
-    if(PKG_CONFIG_FOUND)
-        pkg_check_modules(SPDLOG spdlog)
-    endif()
-endif()
+# Logging uses Qt's built-in qInfo/qWarning/qCritical — no external logger needed.
 
 # FFmpeg for future hardware accel (optional)
 find_package(PkgConfig QUIET)
@@ -63,18 +55,6 @@ target_link_libraries(android_control_core PUBLIC
     Qt6::Network
 )
 
-if(TARGET spdlog::spdlog)
-    target_link_libraries(android_control_core PUBLIC spdlog::spdlog)
-elseif(SPDLOG_FOUND)
-    target_include_directories(android_control_core PUBLIC ${SPDLOG_INCLUDE_DIRS})
-    target_link_libraries(android_control_core PUBLIC ${SPDLOG_LIBRARIES})
-else()
-    find_package(fmt QUIET)
-    if(TARGET fmt::fmt)
-        target_link_libraries(android_control_core PUBLIC fmt::fmt)
-    endif()
-endif()
-
 if(FFMPEG_FOUND)
     target_include_directories(android_control_core PUBLIC ${FFMPEG_INCLUDE_DIRS})
     target_link_libraries(android_control_core PUBLIC ${FFMPEG_LIBRARIES})
@@ -82,18 +62,8 @@ endif()
 
 # Main executable
 add_executable(android-control src/main.cpp)
+target_compile_definitions(android-control PRIVATE ANDROID_CONTROL_VERSION="${PROJECT_VERSION}")
 target_link_libraries(android-control PRIVATE android_control_core)
-
-if(TARGET spdlog::spdlog)
-    target_link_libraries(android-control PRIVATE spdlog::spdlog)
-elseif(SPDLOG_FOUND)
-    target_include_directories(android-control PRIVATE ${SPDLOG_INCLUDE_DIRS})
-    target_link_libraries(android-control PRIVATE ${SPDLOG_LIBRARIES})
-else()
-    # Fallback: try header-only spdlog via include path /usr/include/spdlog
-    message(STATUS "Using system spdlog headers")
-    target_link_libraries(android-control PRIVATE fmt)
-endif()
 
 if(FFMPEG_FOUND)
     target_include_directories(android-control PRIVATE ${FFMPEG_INCLUDE_DIRS})

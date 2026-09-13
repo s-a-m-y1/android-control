@@ -5,7 +5,7 @@
 #include <QProcess>
 #include <QThread>
 #include <QDebug>
-#include <spdlog/spdlog.h>
+#include <QRegularExpression>
 
 namespace AndroidControl {
 
@@ -25,6 +25,15 @@ QString ScrcpyManager::scrcpyVersion() {
     return QString::fromUtf8(p.readAllStandardOutput() + p.readAllStandardError()).split('\n').first().trimmed();
 }
 
+int ScrcpyManager::scrcpyMajorVersion() {
+    static int major = [] {
+        const QRegularExpression re("scrcpy\\s+(\\d+)");
+        auto m = re.match(scrcpyVersion());
+        return m.hasMatch() ? m.captured(1).toInt() : 0;
+    }();
+    return major;
+}
+
 QStringList ScrcpyManager::buildArgs(const QString &serial, const QStringList &extraArgs) const {
     QStringList args;
     args << "--serial" << serial;
@@ -41,8 +50,11 @@ QStringList ScrcpyManager::buildArgs(const QString &serial, const QStringList &e
         if (d.fullscreen) args << "--fullscreen";
         if (d.disableScreensaver) args << "--disable-screensaver";
         if (i.turnScreenOff) args << "--turn-screen-off";
-        if (i.clipboardAutosync) args << "--clipboard-autosync";
-        else args << "--no-clipboard-autosync";
+        // scrcpy 3.x removed --[no-]clipboard-autosync (sync happens via OSC 52 by default)
+        if (scrcpyMajorVersion() < 3) {
+            if (i.clipboardAutosync) args << "--clipboard-autosync";
+            else args << "--no-clipboard-autosync";
+        }
         args << "--window-title" << QString("Android Control - %1").arg(serial);
     }
     args.append(extraArgs);
@@ -63,7 +75,7 @@ bool ScrcpyManager::start(const QString &serial, const QStringList &extraArgs) {
         return false;
     }
     QStringList args = buildArgs(serial, extraArgs);
-    spdlog::info("Starting scrcpy: scrcpy {}", args.join(" ").toStdString());
+    qInfo() << "Starting scrcpy: scrcpy" << args.join(" ");
     auto *proc = new QProcess(this);
     // important: connect finished to cleanup
     connect(proc, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished), this, [this, serial, proc](int code, QProcess::ExitStatus status){
@@ -162,7 +174,7 @@ bool ScrcpyManager::takeScreenshot(const QString &serial, const QString &outputP
         return false;
     }
     emit screenshotTaken(path);
-    spdlog::info("Screenshot saved to {}", path.toStdString());
+    qInfo() << "Screenshot saved to" << path;
     return true;
 }
 

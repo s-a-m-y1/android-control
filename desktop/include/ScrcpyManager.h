@@ -15,6 +15,7 @@ public:
 
     static bool isScrcpyInstalled();
     static QString scrcpyVersion();
+    static int scrcpyMajorVersion();
 
     bool isMirroring(const QString &serial) const;
     bool start(const QString &serial, const QStringList &extraArgs = {});

@@ -2,6 +2,8 @@
 #include "SettingsManager.h"
 #include <QTemporaryDir>
 #include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 using namespace AndroidControl;
 

@@ -3,7 +3,6 @@
 #include <QStandardPaths>
 #include <QRegularExpression>
 #include <QDebug>
-#include <spdlog/spdlog.h>
 
 namespace AndroidControl {
 
@@ -145,7 +144,7 @@ bool AdbManager::restartServer() {
     try {
         QProcess::execute("adb", {"kill-server"});
         QProcess::execute("adb", {"start-server"});
-        spdlog::info("ADB server restarted");
+        qInfo() << "ADB server restarted";
         return true;
     } catch (...) {
         return false;
