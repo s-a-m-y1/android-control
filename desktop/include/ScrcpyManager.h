@@ -18,6 +18,7 @@ public:
     static int scrcpyMajorVersion();
 
     bool isMirroring(const QString &serial) const;
+    bool isAnyMirroring() const;
     bool start(const QString &serial, const QStringList &extraArgs = {});
     bool stop(const QString &serial);
     void stopAll();

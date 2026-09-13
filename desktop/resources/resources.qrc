@@ -2,4 +2,7 @@
     <qresource prefix="/themes">
         <file>dark-theme.qss</file>
     </qresource>
+    <qresource prefix="/icons">
+        <file alias="android-control.svg">icons/android-control.svg</file>
+    </qresource>
 </RCC>

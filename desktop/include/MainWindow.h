@@ -11,6 +11,7 @@
 #include <QScrollArea>
 #include <QVBoxLayout>
 #include <QTimer>
+#include <QSystemTrayIcon>
 
 namespace AndroidControl {
 
@@ -26,6 +27,12 @@ public:
 
     // Auto-start mirroring on launch (--mirror [serial]); empty serial picks the first connected device.
     void startMirroringFor(const QString &serial);
+
+signals:
+    void raiseRequested(); // a second instance asked us to show the window
+
+protected:
+    void closeEvent(QCloseEvent *event) override;
 
 private slots:
     void onDevicesUpdated(const std::vector<DeviceInfo> &devices);
@@ -107,6 +114,12 @@ private:
 
     QTimer *m_refreshTimer = nullptr;
     bool m_isRecording = false;
+
+    // System tray (keeps mirroring alive when the main window is closed)
+    QSystemTrayIcon *m_trayIcon = nullptr;
+    bool m_explicitQuit = false;
+
+    void setupTrayIcon();
 };
 
 } // namespace AndroidControl

@@ -19,6 +19,8 @@
 #include <QDesktopServices>
 #include <QUrl>
 #include <QMenuBar>
+#include <QMenu>
+#include <QCloseEvent>
 #include <QToolBar>
 #include <QStatusBar>
 #include <QTimer>
@@ -50,6 +52,8 @@ MainWindow::MainWindow(AdbManager *adb, ScrcpyManager *scrcpy, SettingsManager *
     m_refreshTimer = new QTimer(this);
     connect(m_refreshTimer, &QTimer::timeout, this, [this](){ m_adb->listDevicesAsync(); });
     m_refreshTimer->start(5000);
+
+    setupTrayIcon();
 
     // Restore selected device
     m_selectedSerial = m_settings->connection.selectedDevice;
@@ -376,6 +380,65 @@ void MainWindow::onDeviceSelected(const QString &serial) {
     rebuildDeviceList();
     updatePreview();
     updateStatusBar();
+}
+
+void MainWindow::setupTrayIcon() {
+    if (!QSystemTrayIcon::isSystemTrayAvailable()) {
+        qWarning() << "No system tray available — closing the main window will quit";
+        return;
+    }
+    QIcon appIcon(":/icons/android-control.svg");
+    setWindowIcon(appIcon);
+    m_trayIcon = new QSystemTrayIcon(this);
+    m_trayIcon->setIcon(appIcon);
+    m_trayIcon->setToolTip("Android Control");
+    auto *menu = new QMenu(this);
+    auto *showAction = menu->addAction("Show Android Control");
+    showAction->setIcon(QIcon::fromTheme("view-restore"));
+    connect(showAction, &QAction::triggered, this, [this](){
+        show();
+        raise();
+        activateWindow();
+    });
+    auto *mirrorAction = menu->addAction("Stop All Mirroring");
+    mirrorAction->setIcon(QIcon::fromTheme("media-playback-stop"));
+    connect(mirrorAction, &QAction::triggered, this, [this](){
+        m_scrcpy->stopAll();
+        refreshDevices();
+    });
+    menu->addSeparator();
+    auto *quitAction = menu->addAction("Quit");
+    quitAction->setIcon(QIcon::fromTheme("application-exit"));
+    connect(quitAction, &QAction::triggered, this, [this](){
+        m_explicitQuit = true;
+        close();
+    });
+    m_trayIcon->setContextMenu(menu);
+    connect(m_trayIcon, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason){
+        if (reason == QSystemTrayIcon::Trigger || reason == QSystemTrayIcon::DoubleClick) {
+            if (isVisible()) hide();
+            else { show(); raise(); activateWindow(); }
+        }
+    });
+    m_trayIcon->show();
+}
+
+void MainWindow::closeEvent(QCloseEvent *event) {
+    if (m_explicitQuit || !m_scrcpy->isAnyMirroring()) {
+        // Real exit: stop mirroring and quit normally.
+        m_scrcpy->stopAll();
+        event->accept();
+        QApplication::quit();
+        return;
+    }
+    // Mirroring is active: closing the main window just hides it — the scrcpy
+    // window and background polling keep running until Quit from the tray.
+    hide();
+    event->ignore();
+    if (m_trayIcon)
+        m_trayIcon->showMessage("Android Control",
+            "Still running in the tray — mirroring continues. Click the tray icon to reopen.",
+            QSystemTrayIcon::Information, 4000);
 }
 
 void MainWindow::startMirroringFor(const QString &serial) {

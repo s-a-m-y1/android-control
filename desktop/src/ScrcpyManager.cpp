@@ -66,6 +66,13 @@ bool ScrcpyManager::isMirroring(const QString &serial) const {
     return (*it)->state() == QProcess::Running;
 }
 
+bool ScrcpyManager::isAnyMirroring() const {
+    for (auto it = m_processes.begin(); it != m_processes.end(); ++it) {
+        if (it.value()->state() == QProcess::Running) return true;
+    }
+    return false;
+}
+
 bool ScrcpyManager::start(const QString &serial, const QStringList &extraArgs) {
     if (isMirroring(serial)) return true;
     if (!isScrcpyInstalled()) {

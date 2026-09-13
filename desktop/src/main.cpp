@@ -8,6 +8,8 @@
 #include "MainWindow.h"
 #include <QDebug>
 #include <QFile>
+#include <QLocalServer>
+#include <QLocalSocket>
 #include <cstdio>
 
 int main(int argc, char *argv[]) {
@@ -52,6 +54,27 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
+    // --mirror [serial] parsing (also forwarded to an already-running instance)
+    const int mirrorIdx = cli.indexOf("--mirror");
+    auto mirrorSerial = [&]() -> QString {
+        if (mirrorIdx >= 0 && mirrorIdx + 1 < cli.size() && !cli.at(mirrorIdx + 1).startsWith('-'))
+            return cli.at(mirrorIdx + 1);
+        return {};
+    }();
+
+    // Single instance: if another android-control is already running, tell it
+    // to show its window instead of launching a second copy.
+    {
+        QLocalSocket probe;
+        probe.connectToServer("android-control-singleton");
+        if (probe.waitForConnected(300)) {
+            probe.write(mirrorIdx >= 0 ? ("MIRROR " + mirrorSerial).toUtf8() : QByteArrayLiteral("SHOW"));
+            probe.waitForBytesWritten(300);
+            qInfo() << "Already running — showing the existing window";
+            return 0;
+        }
+    }
+
     AndroidControl::SettingsManager settings;
     AndroidControl::AdbManager adb;
     AndroidControl::ScrcpyManager scrcpy(&settings);
@@ -62,14 +85,34 @@ int main(int argc, char *argv[]) {
     AndroidControl::MainWindow w(&adb, &scrcpy, &settings, &fileMgr, &clipboard);
     w.show();
 
-    // --mirror [serial]: start mirroring immediately (serial optional = first connected device)
-    const int mirrorIdx = cli.indexOf("--mirror");
-    if (mirrorIdx >= 0) {
-        QString serial;
-        if (mirrorIdx + 1 < cli.size() && !cli.at(mirrorIdx + 1).startsWith('-'))
-            serial = cli.at(mirrorIdx + 1);
-        w.startMirroringFor(serial);
-    }
+    // Listen for second launches: SHOW reveals the window, MIRROR starts mirroring.
+    QLocalServer instanceServer;
+    QLocalServer::removeServer("android-control-singleton");
+    instanceServer.listen("android-control-singleton");
+    QObject::connect(&instanceServer, &QLocalServer::newConnection, [&]() {
+        auto *conn = instanceServer.nextPendingConnection();
+        auto handleCommand = [conn, &w, &scrcpy]() {
+            const QString cmd = QString::fromUtf8(conn->readAll()).trimmed();
+            if (cmd.isEmpty()) return;
+            qInfo() << "Instance command received:" << cmd;
+            w.show();
+            w.raise();
+            w.activateWindow();
+            if (cmd.startsWith("MIRROR") && !scrcpy.isAnyMirroring())
+                w.startMirroringFor(cmd.mid(6).trimmed());
+        };
+        QObject::connect(conn, &QLocalSocket::readyRead, conn, handleCommand);
+        // The second instance often writes and exits immediately, so the data can
+        // land before readyRead is connected — handle it on disconnect too.
+        QObject::connect(conn, &QLocalSocket::disconnected, conn, [conn, handleCommand]() mutable {
+            handleCommand();
+            conn->deleteLater();
+        });
+        if (conn->bytesAvailable() > 0) handleCommand();
+    });
+
+    if (mirrorIdx >= 0)
+        w.startMirroringFor(mirrorSerial);
 
     int ret = app.exec();
     scrcpy.stopAll();
